@@ -395,6 +395,11 @@ const WordPuzzleGame: React.FC = () => {
     const newScore = gameState.score + finalXP;
     const newTotalScore = gameState.totalScore + finalXP;
 
+    // Check if this is the first word
+    if (newDiscoveredWords.length === 1) {
+      setIsFirstWord(true);
+    }
+
     setGameState(prev => ({
       ...prev,
       discoveredWords: newDiscoveredWords,
@@ -405,6 +410,26 @@ const WordPuzzleGame: React.FC = () => {
       isComplete: newDiscoveredWords.length === prev.availableWords.length
     }));
 
+    // Award blockchain tokens for word found (if wallet connected)
+    if (wallet.connected && blockchainProfile?.honeycombProfileId) {
+      try {
+        const tokenReward = await blockchainService.awardTokens(
+          wallet,
+          blockchainProfile.honeycombProfileId,
+          `Word Found: ${gameState.currentWord}`,
+          Math.floor(finalXP / 10) // Convert XP to tokens
+        );
+        
+        setTokenTransactions(prev => [...prev, tokenReward]);
+        setBlockchainProfile(prev => prev ? {
+          ...prev,
+          tokenBalance: prev.tokenBalance + tokenReward.amount
+        } : null);
+      } catch (error) {
+        console.error('Error awarding tokens:', error);
+      }
+    }
+
     setGameMessage(`Excellent! +${finalXP} XP! ${currentPuzzle?.isRare ? '🎁' : '🎉'}`);
     
     if (gameState.soundEnabled) {
@@ -412,10 +437,15 @@ const WordPuzzleGame: React.FC = () => {
     }
 
     // Check if level is complete
-    if (newDiscoveredWords.length === gameState.availableWords.length) {
+    const isLevelComplete = newDiscoveredWords.length === gameState.availableWords.length;
+    if (isLevelComplete) {
+      await checkAndAwardRewards(true);
       await handlePuzzleCompletion();
+    } else {
+      // Check for other achievements
+      await checkAndAwardRewards(false);
     }
-  }, [gameState, currentPuzzle, playerProfile, traitService]);
+  }, [gameState, currentPuzzle, playerProfile, traitService, wallet, blockchainProfile, isFirstWord]);
 
   const handlePuzzleCompletion = async () => {
     if (!currentPuzzle || !playerProfile || !puzzleStartTime) return;
@@ -701,12 +731,14 @@ const WordPuzzleGame: React.FC = () => {
         soundEnabled={gameState.soundEnabled}
         volume={volume}
         isWalletConnected={isWalletConnected}
+        blockchainProfile={blockchainProfile}
         onVolumeChange={handleVolumeChange}
         onSoundToggle={toggleSound}
         onRestart={handleRestart}
         onWalletConnect={handleWalletConnect}
         onShowProfile={() => setShowProfile(true)}
         onShowMissions={() => setShowMissions(true)}
+        onShowAchievements={() => setShowAchievements(true)}
         playerProfile={playerProfile}
       />
 
