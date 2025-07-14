@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Settings, Volume2, VolumeX, RotateCcw, Wallet, Wifi, WifiOff, User, Target } from 'lucide-react';
-import { PlayerProfile } from '../types/game';
+import { Settings, Volume2, VolumeX, RotateCcw, Wallet, Wifi, WifiOff, User, Target, Trophy, Coins } from 'lucide-react';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { PlayerProfile, BlockchainProfile } from '../types/game';
+import { WalletButton } from './wallet';
 
 interface TopNavigationProps {
   level: number;
@@ -13,7 +15,9 @@ interface TopNavigationProps {
   onWalletConnect: () => void;
   onShowProfile: () => void;
   onShowMissions: () => void;
+  onShowAchievements: () => void; // New prop for achievements
   playerProfile: PlayerProfile | null;
+  blockchainProfile?: BlockchainProfile;
 }
 
 const TopNavigation: React.FC<TopNavigationProps> = ({
@@ -27,17 +31,25 @@ const TopNavigation: React.FC<TopNavigationProps> = ({
   onWalletConnect,
   onShowProfile,
   onShowMissions,
-  playerProfile
+  onShowAchievements,
+  playerProfile,
+  blockchainProfile
 }) => {
+  const wallet = useWallet();
   const [showSettings, setShowSettings] = useState(false);
   const [showRestartConfirm, setShowRestartConfirm] = useState(false);
+  const [showWalletMenu, setShowWalletMenu] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
+  const walletRef = useRef<HTMLDivElement>(null);
 
   // Close settings dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
         setShowSettings(false);
+      }
+      if (walletRef.current && !walletRef.current.contains(event.target as Node)) {
+        setShowWalletMenu(false);
       }
     };
 
@@ -59,10 +71,12 @@ const TopNavigation: React.FC<TopNavigationProps> = ({
     setShowRestartConfirm(false);
   };
 
+  const formatWalletAddress = (address: string) => {
+    return `${address.slice(0, 4)}...${address.slice(-4)}`;
+  };
+
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-50 h-[60px] bg-gradient-to-r from-purple-900 via-purple-800 to-purple-900 border-b border-purple-600 shadow-lg">
-      </nav>
       <nav className="fixed top-0 left-0 right-0 z-50 h-[60px] bg-gradient-to-r from-primary-900 via-primary-800 to-primary-900 border-b border-gold-400/30 shadow-lg">
         <div className="flex items-center justify-between h-full px-4 max-w-7xl mx-auto">
           {/* Left Section - Settings */}
@@ -135,63 +149,119 @@ const TopNavigation: React.FC<TopNavigationProps> = ({
           {/* Center Section - Title and Level */}
           <div className="flex flex-col items-center justify-center flex-1">
             <h1 className="text-2xl font-bold bg-gradient-to-r from-gold-400 to-gold-600 bg-clip-text text-transparent leading-tight">
-              Puzzle Rush: Hourly
+              Word Cookie Blockchain
             </h1>
-            <div className="text-lg font-semibold text-gray-200 leading-tight">
-              Level {level} • {playerProfile?.totalXP.toLocaleString() || 0} XP
+            <div className="flex items-center space-x-4 text-lg font-semibold text-gray-200 leading-tight">
+              <span>Level {level}</span>
+              <span>•</span>
+              <span>{playerProfile?.totalXP.toLocaleString() || 0} XP</span>
+              {blockchainProfile && (
+                <>
+                  <span>•</span>
+                  <div className="flex items-center space-x-1">
+                    <Coins className="w-4 h-4 text-yellow-400" />
+                    <span className="text-yellow-400">{blockchainProfile.tokenBalance.toLocaleString()}</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
-          {/* Right Section - Wallet */}
-          <div className="flex items-center space-x-2 min-w-[200px] justify-end">
+          {/* Right Section - Action Buttons and Wallet */}
+          <div className="flex items-center space-x-2 min-w-[300px] justify-end">
+            {/* Achievements Button */}
+            <button
+              onClick={onShowAchievements}
+              className="h-8 px-3 flex items-center space-x-2 rounded-lg bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-primary-900"
+              title="View Achievements & NFTs"
+            >
+              <Trophy className="w-4 h-4 text-white" />
+              <span className="text-xs font-medium text-white hidden sm:inline">Achievements</span>
+            </button>
+
             {/* Profile Button */}
             <button
               onClick={onShowProfile}
               className="h-8 px-3 flex items-center space-x-2 rounded-lg bg-primary-700 hover:bg-primary-600 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-gold-400 focus:ring-offset-2 focus:ring-offset-primary-900 neon-purple"
-              aria-label="View profile"
+              title="View Profile"
             >
               <User className="w-4 h-4 text-gold-300" />
-              <span className="text-sm font-medium text-gold-300 hidden sm:inline">Profile</span>
+              <span className="text-xs font-medium text-gold-300 hidden sm:inline">Profile</span>
             </button>
 
             {/* Missions Button */}
             <button
               onClick={onShowMissions}
-              className="h-8 px-3 flex items-center space-x-2 rounded-lg bg-primary-700 hover:bg-primary-600 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-primary-900 neon-emerald"
-              aria-label="View missions"
+              className="h-8 px-3 flex items-center space-x-2 rounded-lg bg-primary-700 hover:bg-primary-600 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-gold-400 focus:ring-offset-2 focus:ring-offset-primary-900 neon-purple"
+              title="View Missions"
             >
-              <Target className="w-4 h-4 text-emerald-300" />
-              <span className="text-sm font-medium text-emerald-300 hidden sm:inline">Missions</span>
+              <Target className="w-4 h-4 text-gold-300" />
+              <span className="text-xs font-medium text-gold-300 hidden sm:inline">Missions</span>
             </button>
 
-            <div className="flex items-center space-x-2">
-              {/* Connection Status Indicator */}
-              <div className="flex items-center space-x-1">
-                {isWalletConnected ? (
-                  <Wifi className="w-4 h-4 text-green-400" />
-                ) : (
-                  <WifiOff className="w-4 h-4 text-gray-400" />
-                )}
-                <div className={`w-2 h-2 rounded-full ${
-                  isWalletConnected ? 'bg-green-400 animate-pulse' : 'bg-gray-400'
-                }`} />
-              </div>
+            {/* Wallet Section */}
+            <div className="relative" ref={walletRef}>
+              {wallet.connected ? (
+                <button
+                  onClick={() => setShowWalletMenu(!showWalletMenu)}
+                  className="h-8 px-3 flex items-center space-x-2 rounded-lg bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2 focus:ring-offset-primary-900"
+                  title="Wallet Connected"
+                >
+                  <Wifi className="w-4 h-4 text-white" />
+                  <span className="text-xs font-medium text-white hidden md:inline">
+                    {formatWalletAddress(wallet.publicKey?.toBase58() || '')}
+                  </span>
+                </button>
+              ) : (
+                <div className="scale-75 origin-right">
+                  <WalletButton />
+                </div>
+              )}
 
-              {/* Wallet Connect Button */}
-              <button
-                onClick={onWalletConnect}
-                className={`h-8 px-3 flex items-center space-x-2 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-primary-900 ${
-                  isWalletConnected
-                    ? 'emerald-accent text-white focus:ring-emerald-400 neon-emerald'
-                    : 'gold-accent focus:ring-gold-400 neon-gold'
-                }`}
-                aria-label={isWalletConnected ? 'Wallet connected' : 'Connect wallet'}
-              >
-                <Wallet className="w-4 h-4" />
-                <span className="text-sm font-medium hidden sm:inline">
-                  {isWalletConnected ? 'Connected' : 'Connect'}
-                </span>
-              </button>
+              {/* Wallet Dropdown */}
+              {showWalletMenu && wallet.connected && (
+                <div className="absolute top-12 right-0 w-64 bg-primary-800 rounded-xl shadow-xl border border-gold-400/30 p-4 z-50 animate-in slide-in-from-top-2 duration-200">
+                  <div className="text-center mb-4">
+                    <div className="flex items-center justify-center space-x-2 mb-2">
+                      <Wifi className="w-5 h-5 text-green-400" />
+                      <span className="text-green-400 font-medium">Connected</span>
+                    </div>
+                    <div className="text-xs text-gray-300 break-all">
+                      {wallet.publicKey?.toBase58()}
+                    </div>
+                  </div>
+
+                  {blockchainProfile && (
+                    <div className="mb-4 p-3 bg-primary-700 rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm text-gray-300">Token Balance</span>
+                        <div className="flex items-center space-x-1">
+                          <Coins className="w-4 h-4 text-yellow-400" />
+                          <span className="text-yellow-400 font-bold">
+                            {blockchainProfile.tokenBalance.toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-300">NFTs Owned</span>
+                        <span className="text-purple-400 font-bold">
+                          {blockchainProfile.nftCount}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => {
+                      wallet.disconnect();
+                      setShowWalletMenu(false);
+                    }}
+                    className="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-400"
+                  >
+                    Disconnect Wallet
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

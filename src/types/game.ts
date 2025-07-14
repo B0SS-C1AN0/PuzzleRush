@@ -49,46 +49,103 @@ export interface HourlyPuzzle {
   isRare?: boolean;
 }
 
-export interface PuzzleAttempt {
-  puzzleId: string;
-  playerId: string;
-  startTime: Date;
-  endTime?: Date;
-  wordsFound: string[];
-  accuracy: number;
-  completionTime: number;
-  xpEarned: number;
-  traits: PlayerTrait[];
+// Blockchain-related types for Honeycomb Protocol integration
+export interface BlockchainProfile {
+  walletAddress: string;
+  honeycombProfileId?: string;
+  tokenBalance: number;
+  nftCount: number;
+  onChainStats: OnChainStats;
+  isWalletConnected: boolean;
 }
 
-export interface PlayerTrait {
+export interface OnChainStats {
+  totalWordsFound: number;
+  dailyStreak: number;
+  perfectLevels: number;
+  averageTimePerWord: number;
+  favoriteLetterCombination: string;
+  lastPlayedDate: Date;
+  achievementsUnlocked: string[];
+}
+
+export interface Achievement {
   id: string;
   name: string;
   description: string;
   icon: string;
-  unlockedAt: Date;
-  level: number;
-  benefits: TraitBenefit[];
+  type: AchievementType;
+  rarity: 'common' | 'rare' | 'epic' | 'legendary';
+  unlockedAt?: Date;
+  isNFT: boolean;
+  nftMint?: string;
+  tokenReward: number;
+  progress: number;
+  maxProgress: number;
+  isUnlocked: boolean;
 }
 
-export interface TraitBenefit {
-  type: 'xp_boost' | 'early_access' | 'double_xp' | 'special_content';
-  value: number;
+export type AchievementType = 
+  | 'first_word'
+  | 'speed_demon'
+  | 'word_master'
+  | 'perfect_level'
+  | 'daily_warrior'
+  | 'puzzle_pioneer'
+  | 'vocabulary_virtuoso'
+  | 'letter_legend';
+
+export interface TokenTransaction {
+  id: string;
+  type: 'earned' | 'spent';
+  amount: number;
+  reason: string;
+  timestamp: Date;
+  transactionHash?: string;
+}
+
+export interface BlockchainReward {
+  type: 'token' | 'nft' | 'achievement';
+  amount?: number;
+  achievementId?: string;
+  nftMetadata?: NFTMetadata;
+  message: string;
+}
+
+export interface NFTMetadata {
+  name: string;
   description: string;
+  image: string;
+  attributes: NFTAttribute[];
+  mint: string;
 }
 
+export interface NFTAttribute {
+  trait_type: string;
+  value: string | number;
+}
+
+// Enhanced PlayerProfile to include blockchain features
 export interface PlayerProfile {
   id: string;
-  walletAddress?: string;
-  username: string;
-  totalXP: number;
+  name: string;
   level: number;
+  totalXP: number;
+  currentStreak: number;
+  bestStreak: number;
+  gamesPlayed: number;
+  wordsFound: number;
+  averageScore: number;
+  achievements: Badge[];
   traits: PlayerTrait[];
-  puzzleHistory: PuzzleAttempt[];
-  streakCount: number;
-  longestStreak: number;
-  badges: Badge[];
-  reputation: number;
+  createdAt: Date;
+  lastPlayed: Date;
+  preferences: PlayerPreferences;
+  
+  // Blockchain features
+  blockchain?: BlockchainProfile;
+  blockchainAchievements: Achievement[];
+  tokenTransactions: TokenTransaction[];
 }
 
 export interface Badge {
@@ -98,35 +155,38 @@ export interface Badge {
   icon: string;
   rarity: 'common' | 'rare' | 'epic' | 'legendary';
   unlockedAt: Date;
+  category: BadgeCategory;
 }
 
-export interface Mission {
+export interface PlayerTrait {
   id: string;
-  type: MissionType;
-  title: string;
+  name: string;
   description: string;
-  requirements: MissionRequirement[];
-  rewards: MissionReward[];
-  progress: number;
-  maxProgress: number;
-  isCompleted: boolean;
-  expiryTime?: Date;
+  icon: string;
+  level: number;
+  benefits: TraitBenefit[];
+  category: TraitCategory;
 }
 
-export interface MissionRequirement {
-  type: 'solve_puzzles' | 'earn_xp' | 'maintain_streak' | 'solve_within_time';
-  target: number;
-  current: number;
-}
-
-export interface MissionReward {
-  type: 'xp' | 'trait' | 'badge' | 'special_puzzle';
-  value: number | string;
+export interface TraitBenefit {
+  type: 'score_multiplier' | 'hint_discount' | 'time_bonus' | 'xp_bonus';
+  value: number;
   description: string;
 }
 
-export type PuzzleCategory = 'standard' | 'themed' | 'challenge' | 'rare_drop';
-export type PuzzleDifficulty = 'easy' | 'medium' | 'hard' | 'expert' | 'master';
+export interface PlayerPreferences {
+  soundEnabled: boolean;
+  musicEnabled: boolean;
+  hintsEnabled: boolean;
+  showAnimations: boolean;
+  difficulty: 'easy' | 'medium' | 'hard';
+  colorTheme: 'default' | 'dark' | 'colorful';
+}
+
+export type BadgeCategory = 'achievement' | 'milestone' | 'special' | 'seasonal';
+export type TraitCategory = 'cognitive' | 'strategic' | 'social' | 'creative';
+export type PuzzleCategory = 'daily' | 'weekly' | 'special' | 'community';
+export type PuzzleDifficulty = 'easy' | 'medium' | 'hard' | 'expert';
 export type MissionType = 'hourly_puzzle' | 'streak_challenge' | 'rare_puzzle_drop' | 'daily_quest';
 
 // Honeycomb integration types
