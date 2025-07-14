@@ -1,11 +1,14 @@
 import React from 'react';
 import WordPuzzleGame from './components/WordPuzzleGame';
+import { WalletConnectionProvider } from './components/wallet';
 
 function App() {
   return (
-    <div className="game-background">
-      <WordPuzzleGame />
-    </div>
+    <WalletConnectionProvider>
+      <div className="game-background">
+        <WordPuzzleGame />
+      </div>
+    </WalletConnectionProvider>
   );
 }
 

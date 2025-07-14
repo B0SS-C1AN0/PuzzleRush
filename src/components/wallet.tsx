@@ -4,20 +4,27 @@ import {
   WalletProvider
 } from "@solana/wallet-adapter-react";
 import {
-  WalletModalProvider
+  WalletModalProvider,
+  WalletMultiButton
 } from "@solana/wallet-adapter-react-ui";
 import {
-  PhantomWalletAdapter
+  PhantomWalletAdapter,
+  SolflareWalletAdapter
 } from "@solana/wallet-adapter-wallets";
-import { clusterApiUrl } from "@solana/web3.js";
+import { RPC_URL } from "../utils/honeycomb";
 
-require('@solana/wallet-adapter-react-ui/styles.css');
+// Import default styles
+import '@solana/wallet-adapter-react-ui/styles.css';
 
 export const WalletConnectionProvider: FC<{ children: ReactNode }> = ({ children }) => {
-  const endpoint = clusterApiUrl('devnet');
+  // Use Honeycomb's test network (Honeynet)
+  const endpoint = useMemo(() => RPC_URL, []);
 
   const wallets = useMemo(
-    () => [new PhantomWalletAdapter()],
+    () => [
+      new PhantomWalletAdapter(),
+      new SolflareWalletAdapter()
+    ],
     []
   );
 
@@ -27,5 +34,12 @@ export const WalletConnectionProvider: FC<{ children: ReactNode }> = ({ children
         <WalletModalProvider>{children}</WalletModalProvider>
       </WalletProvider>
     </ConnectionProvider>
+  );
+};
+
+// Enhanced wallet button component
+export const WalletButton: FC = () => {
+  return (
+    <WalletMultiButton className="!bg-gradient-to-r !from-purple-600 !to-blue-600 !text-white !px-4 !py-2 !rounded-lg !font-semibold !transition-all !duration-200 hover:!from-purple-700 hover:!to-blue-700" />
   );
 };
