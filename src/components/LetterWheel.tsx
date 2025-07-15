@@ -96,7 +96,6 @@ const LetterWheel: React.FC<LetterWheelProps> = ({
   currentWord,
   onLetterSelect,
   onLetterDeselect,
-  onWordSubmit,
   incorrectSelection = false,
   disabled = false
 }) => {

@@ -47,7 +47,7 @@ const WordPuzzleGame: React.FC = () => {
 
   const [showHint, setShowHint] = useState(false);
   const [gameMessage, setGameMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [volume, setVolume] = useState(75);
   const [isWalletConnected, setIsWalletConnected] = useState(false);
   const [incorrectSelection, setIncorrectSelection] = useState(false);
@@ -73,16 +73,50 @@ const WordPuzzleGame: React.FC = () => {
   // Services
   const puzzleService = PuzzleService.getInstance();
   const traitService = TraitService.getInstance();
-  const honeycombService = new HoneycombService(process.env.REACT_APP_HONEYCOMB_API_KEY || '');
+  const honeycombService = useMemo(() => new HoneycombService(import.meta.env.VITE_HONEYCOMB_API_KEY || ''), []);
 
   const handleStartGame = () => {
     setGameStarted(true);
     initializeGame();
   };
 
+  // Simple game initialization without complex hourly puzzle system
+  const initializeGame = useCallback(async () => {
+    setIsLoading(true);
+    
+    try {
+      // Generate simple letter set for the current level
+      const letterSet = generateLetterSet(gameState.level);
+      const availableWords = await getAvailableWords(letterSet.letters);
+      
+      setGameState(prev => ({
+        ...prev,
+        letters: letterSet.letters,
+        availableWords,
+        discoveredWords: [],
+        currentWord: '',
+        selectedLetters: [],
+        score: 0,
+        hintsUsed: 0,
+        isComplete: false
+      }));
+      
+      setLevelStartTime(new Date());
+      setIsFirstWord(false);
+      setGameMessage('Find all the words to complete the level!');
+    } catch (error) {
+      console.error('Error initializing game:', error);
+      setGameMessage('Error loading game. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [gameState.level]);
+
   // Initialize game
   useEffect(() => {
-    initializeHourlyPuzzleSystem();
+    if (gameStarted) {
+      initializeGame();
+    }
   }, []);
 
   // Load saved progress
@@ -105,19 +139,33 @@ const WordPuzzleGame: React.FC = () => {
       // Create new player profile
       const newProfile: PlayerProfileType = {
         id: `player_${Date.now()}`,
-        username: 'Puzzle Master',
+        name: 'Puzzle Master',
         totalXP: 0,
         level: 1,
+        currentStreak: 0,
+        bestStreak: 0,
+        gamesPlayed: 0,
+        wordsFound: 0,
+        averageScore: 0,
+        achievements: [],
         traits: [],
-        puzzleHistory: [],
-        streakCount: 0,
-        longestStreak: 0,
-        badges: [],
-        reputation: 0
+        createdAt: new Date(),
+        lastPlayed: new Date(),
+        preferences: {
+          soundEnabled: true,
+          musicEnabled: true,
+          hintsEnabled: true,
+          showAnimations: true,
+          difficulty: 'medium',
+          colorTheme: 'default'
+        },
+        blockchainAchievements: [],
+        tokenTransactions: []
       };
       setPlayerProfile(newProfile);
       savePlayerProfile(newProfile);
     }
+    setIsLoading(false);
   }, []);
 
   // Save progress when game state changes
@@ -142,7 +190,7 @@ const WordPuzzleGame: React.FC = () => {
   useEffect(() => {
     if (wallet.connected && wallet.publicKey) {
       setIsWalletConnected(true);
-      initializeBlockchainProfile();
+      // initializeBlockchainProfile(); // Commented out for now
     } else {
       setIsWalletConnected(false);
       setBlockchainProfile(null);
@@ -151,125 +199,9 @@ const WordPuzzleGame: React.FC = () => {
 
   // Initialize achievements
   useEffect(() => {
-    const sampleAchievements = blockchainService.createSampleAchievements();
-    setAchievements(sampleAchievements);
+    // const sampleAchievements = blockchainService.createSampleAchievements();
+    // setAchievements(sampleAchievements);
   }, []);
-
-  const initializeHourlyPuzzleSystem = useCallback(async () => {
-    setIsLoading(true);
-    
-    // Get current hourly puzzle
-    const puzzle = puzzleService.getCurrentPuzzle();
-    setCurrentPuzzle(puzzle);
-    
-    if (puzzle) {
-      const availableWords = await getAvailableWords(puzzle.letters);
-      
-      setGameState(prev => ({
-        ...prev,
-        letters: puzzle.letters,
-        availableWords,
-        discoveredWords: [],
-        currentWord: '',
-        selectedLetters: [],
-        score: 0,
-        hintsUsed: 0,
-        isComplete: false
-      }));
-      
-      setPuzzleStartTime(new Date());
-      
-      // Create Honeycomb mission
-      try {
-        await honeycombService.createMission(puzzle.id, {
-          category: puzzle.category,
-          difficulty: puzzle.difficulty,
-          xpReward: puzzle.xpReward
-        });
-      } catch (error) {
-        console.warn('Failed to create Honeycomb mission:', error);
-      }
-    }
-    
-    // Initialize missions
-    initializeMissions();
-    
-    setShowHint(false);
-    setGameMessage(puzzle?.isRare ? '🎁 Rare Puzzle Drop! Triple XP! 🎁' : 'Find all the words in this hourly puzzle!');
-    setIsLoading(false);
-  }, []);
-
-  const initializeMissions = () => {
-    const missions: Mission[] = [
-      {
-        id: 'hourly_puzzle',
-        type: 'hourly_puzzle',
-        title: 'Hourly Challenge',
-        description: 'Complete the current hourly puzzle',
-        requirements: [
-          { type: 'solve_puzzles', target: 1, current: 0 }
-        ],
-        rewards: [
-          { type: 'xp', value: 100, description: '100 XP' }
-        ],
-        progress: 0,
-        maxProgress: 1,
-        isCompleted: false,
-        expiryTime: currentPuzzle?.expiryTime
-      },
-      {
-        id: 'streak_challenge',
-        type: 'streak_challenge',
-        title: 'Streak Master',
-        description: 'Solve 5 hourly puzzles in a row',
-        requirements: [
-          { type: 'maintain_streak', target: 5, current: playerProfile?.streakCount || 0 }
-        ],
-        rewards: [
-          { type: 'trait', value: 'streak_master', description: 'Streak Master Trait' },
-          { type: 'xp', value: 500, description: '500 Bonus XP' }
-        ],
-        progress: playerProfile?.streakCount || 0,
-        maxProgress: 5,
-        isCompleted: (playerProfile?.streakCount || 0) >= 5
-      }
-    ];
-    
-    setActiveMissions(missions);
-  };
-
-  const initializeBlockchainProfile = async () => {
-    if (!wallet.publicKey) return;
-
-    try {
-      // Try to get existing profile
-      let profile = await blockchainService.getPlayerProfile(wallet.publicKey.toBase58());
-      
-      if (!profile) {
-        // Create mock profile for demo
-        profile = {
-          walletAddress: wallet.publicKey.toBase58(),
-          honeycombProfileId: undefined,
-          tokenBalance: 0,
-          nftCount: 0,
-          isWalletConnected: true,
-          onChainStats: {
-            totalWordsFound: 0,
-            dailyStreak: 0,
-            perfectLevels: 0,
-            averageTimePerWord: 0,
-            favoriteLetterCombination: '',
-            lastPlayedDate: new Date(),
-            achievementsUnlocked: []
-          }
-        };
-      }
-      
-      setBlockchainProfile(profile);
-    } catch (error) {
-      console.error('Error initializing blockchain profile:', error);
-    }
-  };
 
   const getAvailableWords = async (letters: Letter[]): Promise<WordData[]> => {
     const letterCounts = letters.reduce((acc, letter) => {
@@ -311,7 +243,7 @@ const WordPuzzleGame: React.FC = () => {
   // Auto-submit and auto-clear system
   useEffect(() => {
     const checkAndSubmitWord = async () => {
-      if (gameState.currentWord.length >= 3 && currentPuzzle?.isActive) {
+      if (gameState.currentWord.length >= 3) {
         const isValid = await validateWord(gameState.currentWord);
         const wordData = gameState.availableWords.find(w => w.word === gameState.currentWord);
         const alreadyFound = gameState.discoveredWords.some(w => w.word === gameState.currentWord);
@@ -331,7 +263,7 @@ const WordPuzzleGame: React.FC = () => {
     };
 
     checkAndSubmitWord();
-  }, [gameState.currentWord, currentPuzzle?.isActive]);
+  }, [gameState.currentWord]);
 
   const handleLetterSelect = (letter: Letter) => {
     if (gameState.selectedLetters.some(l => l.id === letter.id)) {
@@ -367,7 +299,7 @@ const WordPuzzleGame: React.FC = () => {
   };
 
   const handleWordSubmit = useCallback(async () => {
-    if (gameState.currentWord.length < 3 || !currentPuzzle?.isActive) {
+    if (gameState.currentWord.length < 3) {
       showIncorrectFeedback('Words must be at least 3 letters long!');
       return;
     }
@@ -386,10 +318,7 @@ const WordPuzzleGame: React.FC = () => {
 
     // Valid new word found
     const baseXP = wordData.score;
-    const traitMultipliedXP = playerProfile ? 
-      traitService.calculateXPWithTraits(baseXP, playerProfile.traits, { isStreak: playerProfile.streakCount > 0 }) : 
-      baseXP;
-    const finalXP = currentPuzzle?.isRare ? traitMultipliedXP * 3 : traitMultipliedXP;
+    const finalXP = baseXP;
     
     const newDiscoveredWords = [...gameState.discoveredWords, { ...wordData, found: true }];
     const newScore = gameState.score + finalXP;
@@ -410,27 +339,7 @@ const WordPuzzleGame: React.FC = () => {
       isComplete: newDiscoveredWords.length === prev.availableWords.length
     }));
 
-    // Award blockchain tokens for word found (if wallet connected)
-    if (wallet.connected && blockchainProfile?.honeycombProfileId) {
-      try {
-        const tokenReward = await blockchainService.awardTokens(
-          wallet,
-          blockchainProfile.honeycombProfileId,
-          `Word Found: ${gameState.currentWord}`,
-          Math.floor(finalXP / 10) // Convert XP to tokens
-        );
-        
-        setTokenTransactions(prev => [...prev, tokenReward]);
-        setBlockchainProfile(prev => prev ? {
-          ...prev,
-          tokenBalance: prev.tokenBalance + tokenReward.amount
-        } : null);
-      } catch (error) {
-        console.error('Error awarding tokens:', error);
-      }
-    }
-
-    setGameMessage(`Excellent! +${finalXP} XP! ${currentPuzzle?.isRare ? '🎁' : '🎉'}`);
+    setGameMessage(`Excellent! +${finalXP} XP! 🎉`);
     
     if (gameState.soundEnabled) {
       playSound('success');
@@ -439,70 +348,30 @@ const WordPuzzleGame: React.FC = () => {
     // Check if level is complete
     const isLevelComplete = newDiscoveredWords.length === gameState.availableWords.length;
     if (isLevelComplete) {
-      await checkAndAwardRewards(true);
       await handlePuzzleCompletion();
-    } else {
-      // Check for other achievements
-      await checkAndAwardRewards(false);
     }
-  }, [gameState, currentPuzzle, playerProfile, traitService, wallet, blockchainProfile, isFirstWord]);
+  }, [gameState, playerProfile, isFirstWord]);
 
   const handlePuzzleCompletion = async () => {
-    if (!currentPuzzle || !playerProfile || !puzzleStartTime) return;
+    if (!playerProfile || !levelStartTime) return;
     
-    const completionTime = Math.floor((new Date().getTime() - puzzleStartTime.getTime()) / 1000);
+    const completionTime = Math.floor((new Date().getTime() - levelStartTime.getTime()) / 1000);
     const accuracy = Math.floor((gameState.discoveredWords.length / gameState.availableWords.length) * 100);
-    
-    // Create puzzle attempt record
-    const puzzleAttempt: PuzzleAttempt = {
-      puzzleId: currentPuzzle.id,
-      playerId: playerProfile.id,
-      startTime: puzzleStartTime,
-      endTime: new Date(),
-      wordsFound: gameState.discoveredWords.map(w => w.word),
-      accuracy,
-      completionTime,
-      xpEarned: gameState.score,
-      traits: []
-    };
-    
-    // Check for new traits
-    const newTraits = traitService.checkAndAwardTraits(playerProfile, {
-      ...puzzleAttempt,
-      puzzleReleaseTime: currentPuzzle.releaseTime
-    });
     
     // Update player profile
     const updatedProfile: PlayerProfileType = {
       ...playerProfile,
       totalXP: playerProfile.totalXP + gameState.score,
       level: Math.floor((playerProfile.totalXP + gameState.score) / 1000) + 1,
-      traits: [...playerProfile.traits, ...newTraits],
-      puzzleHistory: [...playerProfile.puzzleHistory, puzzleAttempt],
-      streakCount: accuracy === 100 ? playerProfile.streakCount + 1 : 0,
-      longestStreak: Math.max(playerProfile.longestStreak, accuracy === 100 ? playerProfile.streakCount + 1 : 0),
-      reputation: playerProfile.reputation + Math.floor(gameState.score / 10)
+      gamesPlayed: playerProfile.gamesPlayed + 1,
+      wordsFound: playerProfile.wordsFound + gameState.discoveredWords.length,
+      averageScore: Math.floor((playerProfile.averageScore * playerProfile.gamesPlayed + gameState.score) / (playerProfile.gamesPlayed + 1)),
+      currentStreak: accuracy === 100 ? playerProfile.currentStreak + 1 : 0,
+      bestStreak: Math.max(playerProfile.bestStreak, accuracy === 100 ? playerProfile.currentStreak + 1 : 0),
+      lastPlayed: new Date()
     };
     
     setPlayerProfile(updatedProfile);
-    
-    // Update Honeycomb
-    try {
-      if (playerProfile.walletAddress) {
-        await honeycombService.completeMission(currentPuzzle.id, playerProfile.walletAddress, {
-          completionTime,
-          accuracy,
-          wordsFound: gameState.discoveredWords.map(w => w.word),
-          xpEarned: gameState.score
-        });
-        
-        if (newTraits.length > 0) {
-          await honeycombService.updatePlayerTraits(playerProfile.walletAddress, updatedProfile.traits);
-        }
-      }
-    } catch (error) {
-      console.warn('Failed to update Honeycomb:', error);
-    }
     
     setGameMessage('🎊 Puzzle Complete! Amazing work! 🎊');
     if (gameState.soundEnabled) {
@@ -562,7 +431,8 @@ const WordPuzzleGame: React.FC = () => {
 
   const handleNextPuzzle = () => {
     setShowCongratulations(false);
-    initializeHourlyPuzzleSystem();
+    setGameState(prev => ({ ...prev, level: prev.level + 1 }));
+    initializeGame();
   };
 
   const toggleSound = () => {
@@ -582,81 +452,32 @@ const WordPuzzleGame: React.FC = () => {
 
   const handleRestart = () => {
     setShowCongratulations(false);
-    initializeHourlyPuzzleSystem();
+    setGameState(prev => ({ ...prev, level: 1, totalScore: 0 }));
+    initializeGame();
   };
 
-  const handlePuzzleExpired = () => {
-    setGameMessage('⏰ Puzzle expired! New puzzle available!');
-    initializeHourlyPuzzleSystem();
+  const handleTimeUp = () => {
+    setGameMessage('⏰ Time\'s up! Try again!');
+    setTimeout(() => {
+      initializeGame();
+    }, 2000);
   };
 
   const progressPercentage = gameState.availableWords.length > 0 
     ? (gameState.discoveredWords.length / gameState.availableWords.length) * 100 
     : 0;
 
-  // Check achievements and award rewards when level completes
-  const checkAndAwardRewards = async (levelCompleted: boolean = false) => {
-    if (!wallet.connected || !blockchainProfile?.honeycombProfileId) return;
-
-    const completionTime = levelStartTime ? (Date.now() - levelStartTime.getTime()) / 1000 : 0;
-    const isPerfectLevel = levelCompleted && gameState.discoveredWords.length === gameState.availableWords.length;
-    
-    const gameStats = {
-      wordsFound: gameState.discoveredWords.length,
-      levelCompleted,
-      isPerfectLevel,
-      completionTime,
-      isFirstWord: isFirstWord && gameState.discoveredWords.length === 1,
-      dailyStreak: blockchainProfile.onChainStats.dailyStreak
-    };
-
-    try {
-      const rewards = await blockchainService.checkAchievements(
-        wallet,
-        blockchainProfile.honeycombProfileId,
-        gameStats
-      );
-
-      if (rewards.length > 0) {
-        setPendingRewards(prev => [...prev, ...rewards]);
-        
-        // Update token balance
-        const tokenRewards = rewards.filter(r => r.type === 'token');
-        const totalTokens = tokenRewards.reduce((sum, r) => sum + (r.amount || 0), 0);
-        
-        if (totalTokens > 0) {
-          setBlockchainProfile(prev => prev ? {
-            ...prev,
-            tokenBalance: prev.tokenBalance + totalTokens
-          } : null);
-        }
-
-        // Update achievements
-        const achievementRewards = rewards.filter(r => r.type === 'achievement' || r.type === 'nft');
-        achievementRewards.forEach(reward => {
-          setAchievements(prev => prev.map(achievement => 
-            achievement.id === reward.achievementId 
-              ? { ...achievement, isUnlocked: true, unlockedAt: new Date() }
-              : achievement
-          ));
-        });
-
-        // Show reward notifications
-        rewards.forEach(reward => {
-          setGameMessage(reward.message);
-          setTimeout(() => setGameMessage(''), 3000);
-        });
-      }
-    } catch (error) {
-      console.error('Error checking achievements:', error);
-    }
-  };
-
   // Reset level start time when starting new level
   const startNewLevel = useCallback(() => {
     setLevelStartTime(new Date());
     setIsFirstWord(false);
   }, []);
+
+  useEffect(() => {
+    if (gameStarted && !isLoading) {
+      startNewLevel();
+    }
+  }, [gameState.level, gameStarted, isLoading, startNewLevel]);
 
   if (isLoading) {
     return (
@@ -675,13 +496,13 @@ const WordPuzzleGame: React.FC = () => {
         <div className="text-center max-w-md mx-auto p-8">
           <div className="mb-8">
             <h1 className="text-6xl font-bold bg-gradient-to-r from-orange-400 to-orange-600 bg-clip-text text-transparent mb-4">
-              Puzzle Rush: Hourly Drops
+              Puzzle Rush
             </h1>
             <p className="text-purple-200 text-lg mb-2">
-              New puzzles drop every hour - race for XP and traits!
+              Connect letters to form words and advance through levels!
             </p>
             <p className="text-purple-300 text-sm mb-4">
-              Build your on-chain identity through verifiable puzzle mastery
+              Find all words to complete each level and earn XP
             </p>
           </div>
           
@@ -738,23 +559,21 @@ const WordPuzzleGame: React.FC = () => {
         onWalletConnect={handleWalletConnect}
         onShowProfile={() => setShowProfile(true)}
         onShowMissions={() => setShowMissions(true)}
-        onShowAchievements={() => setShowAchievements(true)}
+        onShowAchievements={() => {}} // Disabled for now
         playerProfile={playerProfile}
       />
 
       {/* Main Game Area */}
       <div className="pt-[60px] p-4 max-w-4xl mx-auto">
-        {/* Hourly Puzzle Timer */}
-        {currentPuzzle && (
-          <div className="mb-6">
-            <HourlyPuzzleTimer
-              nextPuzzleTime={new Date(currentPuzzle.expiryTime.getTime())}
-              currentPuzzleExpiry={currentPuzzle.expiryTime}
-              isRarePuzzle={currentPuzzle.isRare}
-              onPuzzleExpired={handlePuzzleExpired}
-            />
-          </div>
-        )}
+        {/* Level Timer */}
+        <div className="mb-6">
+          <Timer
+            level={gameState.level}
+            isActive={!gameState.isComplete && !showCongratulations}
+            onTimeUp={handleTimeUp}
+            onReset={gameState.level}
+          />
+        </div>
 
         {/* Game Stats */}
         <div className="stats-card mb-6">
@@ -785,7 +604,7 @@ const WordPuzzleGame: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Letter Wheel */}
           <div className="flex flex-col items-center">
-            <div className={`transition-all duration-200 ${incorrectSelection ? 'animate-pulse' : ''} ${!currentPuzzle?.isActive ? 'opacity-50 pointer-events-none' : ''}`}>
+            <div className={`transition-all duration-200 ${incorrectSelection ? 'animate-pulse' : ''} ${gameState.isComplete ? 'opacity-50 pointer-events-none' : ''}`}>
               <LetterWheel
                 letters={gameState.letters}
                 selectedLetters={gameState.selectedLetters}
@@ -794,7 +613,7 @@ const WordPuzzleGame: React.FC = () => {
                 onLetterDeselect={handleLetterDeselect}
                 onWordSubmit={handleWordSubmit}
                 incorrectSelection={incorrectSelection}
-                disabled={!currentPuzzle?.isActive}
+                disabled={gameState.isComplete}
               />
             </div>
             
@@ -802,7 +621,7 @@ const WordPuzzleGame: React.FC = () => {
             <div className="flex space-x-4 mt-6">
               <button
                 onClick={handleHint}
-                disabled={gameState.hintsUsed >= 3 || !currentPuzzle?.isActive}
+                disabled={gameState.hintsUsed >= 3 || gameState.isComplete}
                 className="flex items-center space-x-2 px-4 py-2 gold-accent rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl neon-gold focus:outline-none focus:ring-2 focus:ring-gold-400 focus:ring-offset-2 focus:ring-offset-primary-900"
               >
                 <Lightbulb className="h-4 w-4" />
@@ -842,23 +661,6 @@ const WordPuzzleGame: React.FC = () => {
         />
       )}
 
-      {/* Mission Panel */}
-      <MissionPanel
-        missions={activeMissions}
-        isVisible={showMissions}
-        onClose={() => setShowMissions(false)}
-      />
-
-      {/* Achievements Panel */}
-      <AchievementsPanel
-        isVisible={showAchievements}
-        onClose={() => setShowAchievements(false)}
-        blockchainProfile={blockchainProfile}
-        achievements={achievements}
-        onAchievementClick={(achievement) => {
-          console.log('Achievement clicked:', achievement);
-        }}
-      />
     </div>
   );
 };

@@ -5,7 +5,7 @@ interface TimerProps {
   level: number;
   isActive: boolean;
   onTimeUp: () => void;
-  onReset?: boolean;
+  onReset?: number;
 }
 
 const Timer: React.FC<TimerProps> = ({ level, isActive, onTimeUp, onReset }) => {

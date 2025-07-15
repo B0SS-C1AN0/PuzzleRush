@@ -15,7 +15,7 @@ interface TopNavigationProps {
   onWalletConnect: () => void;
   onShowProfile: () => void;
   onShowMissions: () => void;
-  onShowAchievements: () => void; // New prop for achievements
+  onShowAchievements: () => void;
   playerProfile: PlayerProfile | null;
   blockchainProfile?: BlockchainProfile;
 }
