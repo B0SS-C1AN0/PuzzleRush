@@ -75,6 +75,25 @@ const WordPuzzleGame: React.FC = () => {
   const traitService = TraitService.getInstance();
   const honeycombService = useMemo(() => new HoneycombService(import.meta.env.VITE_HONEYCOMB_API_KEY || ''), []);
 
+  // Loading timeout to prevent infinite loading
+  useEffect(() => {
+    let loadingTimeout: NodeJS.Timeout;
+    
+    if (isLoading) {
+      loadingTimeout = setTimeout(() => {
+        console.warn('Loading timeout reached, clearing loading state');
+        setIsLoading(false);
+        setGameMessage('Loading timed out. Please try again.');
+      }, 10000); // 10 second timeout
+    }
+    
+    return () => {
+      if (loadingTimeout) {
+        clearTimeout(loadingTimeout);
+      }
+    };
+  }, [isLoading]);
+
   const handleStartGame = () => {
     setGameStarted(true);
     initializeGame();
@@ -213,28 +232,41 @@ const WordPuzzleGame: React.FC = () => {
     const minLength = 3;
     const maxLength = Math.min(8, 5 + gameState.level);
 
-    // Get all words from our dictionary that can be formed with available letters
-    for (let length = minLength; length <= maxLength; length++) {
-      const wordsOfLength = wordDictionary[length] || [];
-      
-      for (const word of wordsOfLength) {
-        const wordCounts = word.split('').reduce((acc, char) => {
-          acc[char] = (acc[char] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>);
+    // Process words in chunks to avoid blocking the main thread
+    const processWordsInChunks = async (words: string[], chunkSize = 50) => {
+      for (let i = 0; i < words.length; i += chunkSize) {
+        const chunk = words.slice(i, i + chunkSize);
+        
+        for (const word of chunk) {
+          const wordCounts = word.split('').reduce((acc, char) => {
+            acc[char] = (acc[char] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>);
 
-        const canForm = Object.entries(wordCounts).every(([char, count]) => 
-          letterCounts[char] >= count
-        );
+          const canForm = Object.entries(wordCounts).every(([char, count]) => 
+            letterCounts[char] >= count
+          );
 
-        if (canForm) {
-          availableWords.push({
-            word: word,
-            score: getWordScore(word, gameState.level),
-            found: false
-          });
+          if (canForm) {
+            availableWords.push({
+              word: word,
+              score: getWordScore(word, gameState.level),
+              found: false
+            });
+          }
+        }
+        
+        // Yield control back to the browser every chunk
+        if (i + chunkSize < words.length) {
+          await new Promise(resolve => setTimeout(resolve, 0));
         }
       }
+    };
+
+    // Process each word length
+    for (let length = minLength; length <= maxLength; length++) {
+      const wordsOfLength = wordDictionary[length] || [];
+      await processWordsInChunks(wordsOfLength);
     }
     
     return availableWords.sort((a, b) => a.word.length - b.word.length);
