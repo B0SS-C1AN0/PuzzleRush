@@ -572,13 +572,13 @@ const WordPuzzleGame: React.FC = () => {
         <div className="text-center max-w-md mx-auto p-8">
           <div className="mb-8">
             <h1 className="text-6xl font-bold bg-gradient-to-r from-orange-400 to-orange-600 bg-clip-text text-transparent mb-4">
-              Puzzle Rush
+              PUZZLE RUSH
             </h1>
             <p className="text-purple-200 text-lg mb-2">
               Connect letters to form words and advance through levels!
             </p>
             <p className="text-purple-300 text-sm mb-4">
-              Find all words to complete each level and earn XP
+              Find all words to complete each level and earn PUZZ token
             </p>
           </div>
           
