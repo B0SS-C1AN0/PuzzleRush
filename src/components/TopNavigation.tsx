@@ -173,8 +173,6 @@ const TopNavigation: React.FC<TopNavigationProps> = ({
             <div className="flex items-center space-x-4 text-lg font-semibold text-gray-200 leading-tight">
               <span>Level {level}</span>
               <span>•</span>
-              <span>{playerProfile?.totalXP.toLocaleString() || 0} XP</span>
-              <span>•</span>
               <div className="flex items-center space-x-1">
                 <Coins className="w-4 h-4 text-yellow-400" />
                 <span className="text-yellow-400">{currentTokenBalance.toLocaleString()} PUZZ</span>
