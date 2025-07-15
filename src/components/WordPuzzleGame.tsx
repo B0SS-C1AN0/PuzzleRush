@@ -10,6 +10,7 @@ import CongratulationsPage from './CongratulationsPage';
 import PlayerProfile from './PlayerProfile';
 import MissionPanel from './MissionPanel';
 import AchievementsPanel from './AchievementsPanel';
+import { HoneycombService } from '../services/honeycomb';
 import { 
   GameState, 
   WordData, 
