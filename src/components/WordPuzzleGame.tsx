@@ -6,6 +6,7 @@ import WordList from './WordList';
 import GameStats from './GameStats';
 import TopNavigation from './TopNavigation';
 import HourlyPuzzleTimer from './HourlyPuzzleTimer';
+import Timer from './Timer';
 import CongratulationsPage from './CongratulationsPage';
 import PlayerProfile from './PlayerProfile';
 import MissionPanel from './MissionPanel';
