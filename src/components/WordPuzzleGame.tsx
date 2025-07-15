@@ -583,7 +583,7 @@ const WordPuzzleGame: React.FC = () => {
           </div>
           
           <div className="mb-8">
-            <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-3 gap-3 mb-6">
               {/* Sample puzzle pieces for decoration */}
               {['P', 'U', 'Z', 'Z', 'L', 'E'].map((letter, index) => (
                 <div key={index} className="relative">
