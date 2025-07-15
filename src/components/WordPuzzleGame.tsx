@@ -31,7 +31,12 @@ import { blockchainService } from '../services/blockchainService';
 import { tokenService } from '../services/tokenService';
 
 const WordPuzzleGame: React.FC = () => {
-  const wallet = useWallet();
+const wallet = useWallet();
+
+if (!wallet || !wallet.connected) {
+  return <div>Please connect your wallet to play.</div>;
+}
+
   const [gameStarted, setGameStarted] = useState(false);
   const [gameState, setGameState] = useState<GameState>({
     level: 1,
