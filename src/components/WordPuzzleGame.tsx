@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo} from 'react';
 import { Lightbulb, User, Target } from 'lucide-react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import LetterWheel from './LetterWheel';
