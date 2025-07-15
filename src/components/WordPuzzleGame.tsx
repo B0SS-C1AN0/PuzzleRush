@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo} from 'react';
 import { Lightbulb, User, Target } from 'lucide-react';
-import { useWallet } from '@solana/wallet-adapter-react';
+//import { useWallet } from '@solana/wallet-adapter-react';
 import LetterWheel from './LetterWheel';
 import WordList from './WordList';
 import GameStats from './GameStats';
@@ -31,7 +31,7 @@ import { blockchainService } from '../services/blockchainService';
 import { tokenService } from '../services/tokenService';
 
 const WordPuzzleGame: React.FC = () => {
-  //const wallet = useWallet();
+  const wallet = useWallet();
   const [gameStarted, setGameStarted] = useState(false);
   const [gameState, setGameState] = useState<GameState>({
     level: 1,
