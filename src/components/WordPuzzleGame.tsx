@@ -28,6 +28,7 @@ import { generateLetterSet, validateWord, getWordScore, playSound, wordDictionar
 import { getStoredProgress, saveProgress, getPlayerProfile, savePlayerProfile } from '../utils/storage';
 import { PuzzleService, TraitService } from '../services/puzzleService';
 import { blockchainService } from '../services/blockchainService';
+import { tokenService } from '../services/tokenService';
 
 const WordPuzzleGame: React.FC = () => {
   const wallet = useWallet();
@@ -160,7 +161,7 @@ const WordPuzzleGame: React.FC = () => {
       const newProfile: PlayerProfileType = {
         id: `player_${Date.now()}`,
         name: 'Puzzle Master',
-        totalXP: 0,
+        totalPuzzTokens: 0,
         level: 1,
         currentStreak: 0,
         bestStreak: 0,
@@ -350,16 +351,23 @@ const WordPuzzleGame: React.FC = () => {
     }
 
     // Valid new word found
-    const baseXP = wordData.score;
-    const finalXP = baseXP;
+    const baseScore = wordData.score;
+    const finalScore = baseScore;
     
     const newDiscoveredWords = [...gameState.discoveredWords, { ...wordData, found: true }];
-    const newScore = gameState.score + finalXP;
-    const newTotalScore = gameState.totalScore + finalXP;
+    const newScore = gameState.score + finalScore;
+    const newTotalScore = gameState.totalScore + finalScore;
 
-    // Check if this is the first word
+    // Check if this is the first word and award PUZZ tokens
+    let firstWordMessage = '';
     if (newDiscoveredWords.length === 1) {
       setIsFirstWord(true);
+      const firstWordReward = await tokenService.awardTokens({
+        type: 'first_word',
+        description: 'First Word Found',
+        amount: 50
+      });
+      firstWordMessage = ` +${firstWordReward.amount} PUZZ bonus! 🪙`;
     }
 
     setGameState(prev => ({
@@ -372,7 +380,7 @@ const WordPuzzleGame: React.FC = () => {
       isComplete: newDiscoveredWords.length === prev.availableWords.length
     }));
 
-    setGameMessage(`Excellent! +${finalXP} XP! 🎉`);
+    setGameMessage(`Excellent! +${finalScore} points! 🎉${firstWordMessage}`);
     
     if (gameState.soundEnabled) {
       playSound('success');
@@ -390,23 +398,58 @@ const WordPuzzleGame: React.FC = () => {
     
     const completionTime = Math.floor((new Date().getTime() - levelStartTime.getTime()) / 1000);
     const accuracy = Math.floor((gameState.discoveredWords.length / gameState.availableWords.length) * 100);
+    const isPerfectLevel = accuracy === 100;
+    
+    // Award PUZZ tokens for level completion
+    const levelRewards = await tokenService.awardLevelCompletion(isFirstWord);
+    
+    // Award perfect level bonus
+    let perfectLevelReward = null;
+    if (isPerfectLevel) {
+      perfectLevelReward = await tokenService.awardPerfectLevel();
+    }
+    
+    // Award speed bonus
+    let speedReward = null;
+    if (completionTime < 60) {
+      speedReward = await tokenService.awardSpeedBonus(completionTime);
+    }
+    
+    // Award daily streak
+    const streakReward = await tokenService.checkAndAwardDailyStreak();
+    
+    // Calculate total PUZZ tokens earned
+    const currentTokenBalance = tokenService.getBalance();
     
     // Update player profile
     const updatedProfile: PlayerProfileType = {
       ...playerProfile,
-      totalXP: playerProfile.totalXP + gameState.score,
-      level: Math.floor((playerProfile.totalXP + gameState.score) / 1000) + 1,
+      totalPuzzTokens: currentTokenBalance,
+      level: Math.floor(currentTokenBalance / 1000) + 1,
       gamesPlayed: playerProfile.gamesPlayed + 1,
       wordsFound: playerProfile.wordsFound + gameState.discoveredWords.length,
       averageScore: Math.floor((playerProfile.averageScore * playerProfile.gamesPlayed + gameState.score) / (playerProfile.gamesPlayed + 1)),
-      currentStreak: accuracy === 100 ? playerProfile.currentStreak + 1 : 0,
-      bestStreak: Math.max(playerProfile.bestStreak, accuracy === 100 ? playerProfile.currentStreak + 1 : 0),
+      currentStreak: isPerfectLevel ? playerProfile.currentStreak + 1 : 0,
+      bestStreak: Math.max(playerProfile.bestStreak, isPerfectLevel ? playerProfile.currentStreak + 1 : 0),
       lastPlayed: new Date()
     };
     
     setPlayerProfile(updatedProfile);
     
-    setGameMessage('🎊 Puzzle Complete! Amazing work! 🎊');
+    // Create reward message
+    let rewardMessage = '🎊 Puzzle Complete! ';
+    const totalEarned = levelRewards.reduce((sum, reward) => sum + reward.amount, 0) + 
+                       (perfectLevelReward?.amount || 0) + 
+                       (speedReward?.amount || 0) + 
+                       (streakReward?.amount || 0);
+    
+    rewardMessage += `+${totalEarned} PUZZ tokens! 🪙`;
+    
+    if (isPerfectLevel) rewardMessage += ' ✨ Perfect Level!';
+    if (speedReward) rewardMessage += ' ⚡ Speed Bonus!';
+    if (streakReward) rewardMessage += ` 🔥 Day ${tokenService.getDailyStreak()} Streak!`;
+    
+    setGameMessage(rewardMessage);
     if (gameState.soundEnabled) {
       playSound('levelComplete');
     }

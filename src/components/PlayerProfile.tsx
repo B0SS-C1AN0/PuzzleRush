@@ -13,18 +13,18 @@ const PlayerProfile: React.FC<PlayerProfileProps> = ({ profile, isVisible, onClo
 
   if (!isVisible) return null;
 
-  const getXPForNextLevel = (currentLevel: number): number => {
-    return currentLevel * 1000; // 1000 XP per level
+  const getPuzzTokensForNextLevel = (currentLevel: number): number => {
+    return currentLevel * 1000; // 1000 PUZZ tokens per level
   };
 
-  const getCurrentLevelXP = (totalXP: number, level: number): number => {
-    const previousLevelXP = (level - 1) * 1000;
-    return totalXP - previousLevelXP;
+  const getCurrentLevelPuzzTokens = (totalPuzzTokens: number, level: number): number => {
+    const previousLevelTokens = (level - 1) * 1000;
+    return totalPuzzTokens - previousLevelTokens;
   };
 
-  const nextLevelXP = getXPForNextLevel(profile.level);
-  const currentLevelXP = getCurrentLevelXP(profile.totalXP, profile.level);
-  const progressPercentage = (currentLevelXP / nextLevelXP) * 100;
+  const nextLevelTokens = getPuzzTokensForNextLevel(profile.level);
+  const currentLevelTokens = getCurrentLevelPuzzTokens(profile.totalPuzzTokens, profile.level);
+  const progressPercentage = (currentLevelTokens / nextLevelTokens) * 100;
 
   const TraitCard: React.FC<{ trait: PlayerTrait }> = ({ trait }) => (
     <div className="bg-primary-700 rounded-lg p-4 border border-gold-400/30">
@@ -98,7 +98,7 @@ const PlayerProfile: React.FC<PlayerProfileProps> = ({ profile, isVisible, onClo
           <div className="mt-4">
             <div className="flex justify-between text-sm text-gray-300 mb-2">
               <span>Level {profile.level}</span>
-              <span>{profile.totalXP.toLocaleString()} XP</span>
+                              <span>{profile.totalPuzzTokens.toLocaleString()} PUZZ</span>
             </div>
             <div className="w-full bg-gray-700 rounded-full h-3">
               <div 
@@ -107,7 +107,7 @@ const PlayerProfile: React.FC<PlayerProfileProps> = ({ profile, isVisible, onClo
               />
             </div>
             <div className="text-xs text-gray-400 mt-1 text-center">
-              {currentLevelXP} / {nextLevelXP} XP to next level
+              {currentLevelTokens} / {nextLevelTokens} PUZZ to next level
             </div>
           </div>
         </div>
@@ -143,8 +143,8 @@ const PlayerProfile: React.FC<PlayerProfileProps> = ({ profile, isVisible, onClo
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-primary-700 rounded-lg p-4 text-center">
                   <Trophy className="w-6 h-6 text-gold-400 mx-auto mb-2" />
-                  <div className="text-xl font-bold text-white">{profile.totalXP.toLocaleString()}</div>
-                  <div className="text-xs text-gray-400">Total XP</div>
+                  <div className="text-xl font-bold text-white">{profile.totalPuzzTokens.toLocaleString()}</div>
+                  <div className="text-xs text-gray-400">Total PUZZ</div>
                 </div>
                 <div className="bg-primary-700 rounded-lg p-4 text-center">
                   <Zap className="w-6 h-6 text-emerald-400 mx-auto mb-2" />
@@ -176,7 +176,7 @@ const PlayerProfile: React.FC<PlayerProfileProps> = ({ profile, isVisible, onClo
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-sm font-bold text-emerald-400">+{attempt.xpEarned} XP</div>
+                        <div className="text-sm font-bold text-emerald-400">+{attempt.puzzTokensEarned} PUZZ</div>
                         <div className="text-xs text-gray-400">
                           {Math.floor(attempt.completionTime / 60)}:{(attempt.completionTime % 60).toString().padStart(2, '0')}
                         </div>
@@ -241,7 +241,7 @@ const PlayerProfile: React.FC<PlayerProfileProps> = ({ profile, isVisible, onClo
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-emerald-400 font-bold">+{attempt.xpEarned} XP</div>
+                        <div className="text-emerald-400 font-bold">+{attempt.puzzTokensEarned} PUZZ</div>
                         <div className="text-xs text-gray-400">{attempt.accuracy}% accuracy</div>
                       </div>
                     </div>

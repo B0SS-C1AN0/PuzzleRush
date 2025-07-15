@@ -44,7 +44,7 @@ export interface HourlyPuzzle {
   difficulty: PuzzleDifficulty;
   letters: Letter[];
   targetWords: string[];
-  xpReward: number;
+  puzzTokenReward: number;
   isActive: boolean;
   isRare?: boolean;
 }
@@ -130,7 +130,7 @@ export interface PlayerProfile {
   id: string;
   name: string;
   level: number;
-  totalXP: number;
+  totalPuzzTokens: number;
   currentStreak: number;
   bestStreak: number;
   gamesPlayed: number;
@@ -169,7 +169,7 @@ export interface PlayerTrait {
 }
 
 export interface TraitBenefit {
-  type: 'score_multiplier' | 'hint_discount' | 'time_bonus' | 'xp_bonus';
+  type: 'score_multiplier' | 'hint_discount' | 'time_bonus' | 'token_bonus';
   value: number;
   description: string;
 }
@@ -186,7 +186,7 @@ export interface PlayerPreferences {
 export type BadgeCategory = 'achievement' | 'milestone' | 'special' | 'seasonal';
 export type TraitCategory = 'cognitive' | 'strategic' | 'social' | 'creative';
 export type PuzzleCategory = 'daily' | 'weekly' | 'special' | 'community';
-export type PuzzleDifficulty = 'easy' | 'medium' | 'hard' | 'expert';
+export type PuzzleDifficulty = 'easy' | 'medium' | 'hard' | 'expert' | 'master';
 export type MissionType = 'hourly_puzzle' | 'streak_challenge' | 'rare_puzzle_drop' | 'daily_quest';
 
 // Honeycomb integration types

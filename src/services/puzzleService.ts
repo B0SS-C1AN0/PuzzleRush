@@ -34,7 +34,7 @@ export class PuzzleService {
       difficulty,
       letters: letterSet.letters,
       targetWords,
-      xpReward: this.calculateXPReward(difficulty, isRare),
+      puzzTokenReward: this.calculatePuzzTokenReward(difficulty, isRare),
       isActive: true,
       isRare,
     };
@@ -84,10 +84,10 @@ export class PuzzleService {
     return []; // Placeholder - would use existing word generation
   }
 
-  private calculateXPReward(difficulty: PuzzleDifficulty, isRare: boolean): number {
-    const baseXP = { easy: 100, medium: 200, hard: 350, expert: 500, master: 750 };
+  private calculatePuzzTokenReward(difficulty: PuzzleDifficulty, isRare: boolean): number {
+    const basePuzzTokens = { easy: 50, medium: 100, hard: 175, expert: 250, master: 400 };
     const multiplier = isRare ? 3 : 1;
-    return baseXP[difficulty] * multiplier;
+    return basePuzzTokens[difficulty] * multiplier;
   }
 }
 
@@ -109,7 +109,7 @@ export class TraitService {
       description: 'Solve within 10 minutes of puzzle drop',
       icon: '🌅',
       benefits: [
-        { type: 'xp_boost' as const, value: 1.2, description: '20% XP boost' },
+        { type: 'token_bonus' as const, value: 1.2, description: '20% PUZZ token bonus' },
         { type: 'early_access' as const, value: 5, description: '5 min early access to next drop' }
       ]
     },
@@ -128,7 +128,7 @@ export class TraitService {
       description: 'Complete 10+ puzzles in a day',
       icon: '🏹',
       benefits: [
-        { type: 'double_xp' as const, value: 2, description: 'Double XP on streaks' }
+        { type: 'token_bonus' as const, value: 2, description: 'Double PUZZ tokens on streaks' }
       ]
     },
     speed_demon: {
@@ -137,7 +137,7 @@ export class TraitService {
       description: 'Solve puzzles in under 2 minutes',
       icon: '⚡',
       benefits: [
-        { type: 'xp_boost' as const, value: 1.5, description: '50% XP boost for speed' }
+        { type: 'token_bonus' as const, value: 1.5, description: '50% PUZZ token bonus for speed' }
       ]
     },
     perfectionist: {
@@ -146,7 +146,7 @@ export class TraitService {
       description: 'Achieve 100% accuracy on 5 consecutive puzzles',
       icon: '💎',
       benefits: [
-        { type: 'xp_boost' as const, value: 1.3, description: '30% XP boost for accuracy' }
+        { type: 'token_bonus' as const, value: 1.3, description: '30% PUZZ token bonus for accuracy' }
       ]
     }
   };
@@ -233,19 +233,17 @@ export class TraitService {
            recentAttempts.every(attempt => attempt.accuracy === 100);
   }
 
-  calculateXPWithTraits(baseXP: number, traits: PlayerTrait[], context: any): number {
+  calculatePuzzTokensWithTraits(baseTokens: number, traits: PlayerTrait[], context: any): number {
     let multiplier = 1;
     
     traits.forEach(trait => {
       trait.benefits.forEach(benefit => {
-        if (benefit.type === 'xp_boost') {
-          multiplier *= benefit.value;
-        } else if (benefit.type === 'double_xp' && context.isStreak) {
+        if (benefit.type === 'token_bonus') {
           multiplier *= benefit.value;
         }
       });
     });
     
-    return Math.floor(baseXP * multiplier);
+    return Math.floor(baseTokens * multiplier);
   }
 }

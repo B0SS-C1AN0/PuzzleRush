@@ -24,7 +24,7 @@ export class HoneycombService {
             release_time: new Date().toISOString(),
             category: metadata.category,
             difficulty: metadata.difficulty,
-            xp_reward: metadata.xpReward,
+            puzz_token_reward: metadata.puzzTokenReward,
           },
         }),
       });
@@ -68,7 +68,7 @@ export class HoneycombService {
           completion_time: results.completionTime,
           accuracy: results.accuracy,
           words_found: results.wordsFound,
-          xp_earned: results.xpEarned,
+          puzz_tokens_earned: results.puzzTokensEarned,
           completed_at: new Date().toISOString(),
         }),
       });
