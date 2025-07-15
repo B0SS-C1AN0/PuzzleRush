@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Settings, Volume2, VolumeX, RotateCcw, Wallet, Wifi, WifiOff, User, Target, Trophy, Coins } from 'lucide-react';
+import { Settings, Volume2, VolumeX, RotateCcw, Wallet, Wifi, WifiOff, User, Target, Trophy, Coins, History } from 'lucide-react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { PlayerProfile, BlockchainProfile } from '../types/game';
 import { WalletButton } from './wallet';
+import { tokenService } from '../services/tokenService';
+import TransactionHistory from './TransactionHistory';
 
 interface TopNavigationProps {
   level: number;
@@ -39,8 +41,25 @@ const TopNavigation: React.FC<TopNavigationProps> = ({
   const [showSettings, setShowSettings] = useState(false);
   const [showRestartConfirm, setShowRestartConfirm] = useState(false);
   const [showWalletMenu, setShowWalletMenu] = useState(false);
+  const [showTransactionHistory, setShowTransactionHistory] = useState(false);
+  const [currentTokenBalance, setCurrentTokenBalance] = useState(0);
   const settingsRef = useRef<HTMLDivElement>(null);
   const walletRef = useRef<HTMLDivElement>(null);
+
+  // Update token balance in real-time
+  useEffect(() => {
+    const updateBalance = () => {
+      setCurrentTokenBalance(tokenService.getBalance());
+    };
+    
+    // Initial balance
+    updateBalance();
+    
+    // Update balance every second for real-time display
+    const interval = setInterval(updateBalance, 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   // Close settings dropdown when clicking outside
   useEffect(() => {
@@ -155,20 +174,26 @@ const TopNavigation: React.FC<TopNavigationProps> = ({
               <span>Level {level}</span>
               <span>•</span>
               <span>{playerProfile?.totalXP.toLocaleString() || 0} XP</span>
-              {blockchainProfile && (
-                <>
-                  <span>•</span>
-                  <div className="flex items-center space-x-1">
-                    <Coins className="w-4 h-4 text-yellow-400" />
-                    <span className="text-yellow-400">{blockchainProfile.tokenBalance.toLocaleString()}</span>
-                  </div>
-                </>
-              )}
+              <span>•</span>
+              <div className="flex items-center space-x-1">
+                <Coins className="w-4 h-4 text-yellow-400" />
+                <span className="text-yellow-400">{currentTokenBalance.toLocaleString()} PUZZ</span>
+              </div>
             </div>
           </div>
 
           {/* Right Section - Action Buttons and Wallet */}
           <div className="flex items-center space-x-2 min-w-[300px] justify-end">
+            {/* Transaction History Button */}
+            <button
+              onClick={() => setShowTransactionHistory(true)}
+              className="h-8 px-3 flex items-center space-x-2 rounded-lg bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 focus:ring-offset-primary-900"
+              title="View Transaction History"
+            >
+              <History className="w-4 h-4 text-white" />
+              <span className="text-xs font-medium text-white hidden sm:inline">History</span>
+            </button>
+
             {/* Achievements Button */}
             <button
               onClick={onShowAchievements}
@@ -231,25 +256,34 @@ const TopNavigation: React.FC<TopNavigationProps> = ({
                     </div>
                   </div>
 
-                  {blockchainProfile && (
-                    <div className="mb-4 p-3 bg-primary-700 rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-gray-300">Token Balance</span>
-                        <div className="flex items-center space-x-1">
-                          <Coins className="w-4 h-4 text-yellow-400" />
-                          <span className="text-yellow-400 font-bold">
-                            {blockchainProfile.tokenBalance.toLocaleString()}
-                          </span>
-                        </div>
+                  <div className="mb-4 p-3 bg-primary-700 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-gray-300">PUZZ Balance</span>
+                      <div className="flex items-center space-x-1">
+                        <Coins className="w-4 h-4 text-yellow-400" />
+                        <span className="text-yellow-400 font-bold">
+                          {currentTokenBalance.toLocaleString()}
+                        </span>
                       </div>
-                      <div className="flex items-center justify-between">
+                    </div>
+                    <button
+                      onClick={() => {
+                        setShowTransactionHistory(true);
+                        setShowWalletMenu(false);
+                      }}
+                      className="w-full text-left text-sm text-blue-400 hover:text-blue-300 transition-colors"
+                    >
+                      View Transaction History →
+                    </button>
+                    {blockchainProfile && (
+                      <div className="flex items-center justify-between mt-2">
                         <span className="text-sm text-gray-300">NFTs Owned</span>
                         <span className="text-purple-400 font-bold">
                           {blockchainProfile.nftCount}
                         </span>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
 
                   <button
                     onClick={() => {
@@ -292,6 +326,12 @@ const TopNavigation: React.FC<TopNavigationProps> = ({
           </div>
         </div>
       )}
+
+      {/* Transaction History Modal */}
+      <TransactionHistory 
+        isOpen={showTransactionHistory}
+        onClose={() => setShowTransactionHistory(false)}
+      />
     </>
   );
 };

@@ -28,6 +28,7 @@ import { generateLetterSet, validateWord, getWordScore, playSound, wordDictionar
 import { getStoredProgress, saveProgress, getPlayerProfile, savePlayerProfile } from '../utils/storage';
 import { PuzzleService, TraitService } from '../services/puzzleService';
 import { blockchainService } from '../services/blockchainService';
+import { tokenService } from '../services/tokenService';
 
 const WordPuzzleGame: React.FC = () => {
   const wallet = useWallet();
